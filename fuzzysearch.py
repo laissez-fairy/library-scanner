@@ -1,4 +1,15 @@
 def ldist(s1: str, s2: str) -> int:
+    """Returns the Levenshtein distance between two strings.
+
+    Gives the notion of similarity considering typos.
+    Calculated in O(m + n) time with dynamic programming.
+
+    Args: s1 (str): usually a search query
+          s2 (str): usually a potential result
+
+    Returns:
+        int: Levenshtein distance between s1 and s2.
+        """
     m = len(s1)
     n = len(s2)
 

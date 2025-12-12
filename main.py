@@ -249,6 +249,19 @@ async def addbook(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def photo(update: Update, context: CallbackContext):
+    """Get a code by photo.
+
+    Indirectly returns ISBN code from photo setting context.user_data[code].
+
+    Args:
+        update(Update): telegram.Update. Contains the message with the photo.
+        context(CallbackContext): telegram.CallbackContext.
+
+    Returns:
+        int: either ConversationHandler.END or ADDBOOK_SHELF to propel the state machine.
+        dict: As a side effect.
+    """
+
     file = await update.message.photo[-1].get_file()
     memory = io.BytesIO()
     memory.seek(0)
