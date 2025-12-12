@@ -1,5 +1,4 @@
 import io, numpy
-from re import search
 import datetime
 import requests
 
@@ -369,5 +368,5 @@ app.add_handler(ConversationHandler(entry_points=[MessageHandler(filters=filters
                                     },
                                     fallbacks=[MessageHandler(filters=filters.TEXT, callback=dbsearch)]))
 
-
-app.run_polling()
+if __name__ == '__main__':
+    app.run_polling()

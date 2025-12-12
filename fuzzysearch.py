@@ -19,4 +19,7 @@ def ldist(s1: str, s2: str) -> int:
     return dp[m][n]
 
 def fuzzymatch(s1, s2):
-    pass
+    if ldist(s1, s2) < len(s1 + s2) / 2:
+        return True
+    else:
+        return False
