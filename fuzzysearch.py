@@ -1,4 +1,4 @@
-def ldist(s1, s2):
+def ldist(s1: str, s2: str) -> int:
     m = len(s1)
     n = len(s2)
 

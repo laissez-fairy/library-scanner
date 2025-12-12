@@ -1,77 +1,83 @@
 -- SQL dump generated using DBML (dbml.dbdiagram.io)
 -- Database: MySQL
 
+DROP DATABASE `issa`;
+
+CREATE DATABASE `issa`;
+
+USE `issa`;
+
 CREATE TABLE `users` (
-  `id` int PRIMARY KEY,
-  `username` varchar(32),
+  `id` bigint AUTO_INCREMENT PRIMARY KEY,
+  `username` varchar(64),
   `created_at` timestamp
 );
 
 CREATE TABLE `ratings` (
-  `id` int PRIMARY KEY,
+  `id` bigint AUTO_INCREMENT PRIMARY KEY,
   `rating` float(8),
-  `user_id` int(8),
-  `isbn` int(13),
-  `author_id` int(8),
+  `user_id` bigint(8),
+  `isbn` bigint(13),
+  `author_id` bigint(8),
   `body` text,
   `rated_at` timestamp
 );
 
 CREATE TABLE `books` (
-  `id` int PRIMARY KEY,
-  `owner_id` int(8),
-  `title` varchar(32),
-  `isbn` int(8),
+  `id` bigint AUTO_INCREMENT PRIMARY KEY,
+  `owner_id` bigint(8),
+  `title` varchar(64),
+  `isbn` bigint(8),
   `rating` float(8),
-  `author_id` int(8),
-  `location_id` int(8),
+  `author_id` bigint(8),
+  `location_id` bigint(8),
   `status` varchar(16),
   `created_at` timestamp,
   `last_used` timestamp,
-  `embedding` int(8)
+  `embedding` bigint(8)
 );
 
 CREATE TABLE `isbn` (
-  `id` int(8) PRIMARY KEY,
-  `isbn` int(13)
+  `id` bigint(8) AUTO_INCREMENT PRIMARY KEY,
+  `isbn` bigint(13)
 );
 
 CREATE TABLE `ratingstoisbn` (
-   `id` int(8) PRIMARY KEY,
-   `rating` int(8),
-   `isbn` int(8)
+   `id` bigint(8) AUTO_INCREMENT PRIMARY KEY,
+   `rating` bigint(8),
+   `isbn` bigint(8)
 );
 
 CREATE TABLE `checkouts` (
-  `id` int PRIMARY KEY,
-  `book` int(8),
+  `id` bigint AUTO_INCREMENT PRIMARY KEY,
+  `book` bigint(8),
   `checkout_at` timestamp
 );
 
 CREATE TABLE `embedding` (
-  `id` int PRIMARY KEY,
-  `genre` int(8),
-  `params` int(8),
+  `id` bigint AUTO_INCREMENT PRIMARY KEY,
+  `genre` bigint(8),
+  `params` bigint(8),
   `published_in` date
 );
 
 CREATE TABLE `authors` (
-  `id` int PRIMARY KEY,
-  `full_name` varchar(32),
+  `id` bigint AUTO_INCREMENT PRIMARY KEY,
+  `full_name` varchar(64),
   `rating` float(8)
 );
 
 CREATE TABLE `location` (
-  `id` int PRIMARY KEY,
-  `common_name` varchar(32),
-  `building_id` int(8),
-  `shelf` int(8),
-  `storey` int(8)
+  `id` bigint AUTO_INCREMENT PRIMARY KEY,
+  `common_name` varchar(64),
+  `building_id` bigint(8),
+  `shelf` bigint(8),
+  `storey` bigint(8)
 );
 
 CREATE TABLE `buildings` (
-  `id` int PRIMARY KEY,
-  `common_name` varchar(32)
+  `id` bigint AUTO_INCREMENT PRIMARY KEY,
+  `common_name` varchar(64)
 );
 
 ALTER TABLE `books` ADD FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`);
@@ -88,9 +94,9 @@ ALTER TABLE `location` ADD FOREIGN KEY (`building_id`) REFERENCES `buildings` (`
 
 ALTER TABLE `books` ADD FOREIGN KEY (`location_id`) REFERENCES `location` (`id`);
 
-ALTER TABLE `users` ADD FOREIGN KEY (`id`) REFERENCES `embedding` (`id`);
+ALTER TABLE `embedding` ADD FOREIGN KEY (`id`) REFERENCES `users` (`id`);
 
-ALTER TABLE `isbn` ADD FOREIGN KEY (`isbn`) REFERENCES `embedding` (`id`);
+ALTER TABLE `embedding` ADD FOREIGN KEY (`id`) REFERENCES `isbn` (`isbn`);
 
 ALTER TABLE `books` ADD FOREIGN KEY (`isbn`) REFERENCES `isbn` (`id`);
 
