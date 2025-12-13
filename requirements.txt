@@ -1,0 +1,5 @@
+opencv-python
+pyzbar
+mysql-connector-python
+sqlalchemy
+python-telegram-bot
