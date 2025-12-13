@@ -29,7 +29,7 @@ NAME_VERIFY, NAME_CALLBACK = range(2)
 ADDBOOK_BUILDING, ADDBOOK_SHELF, ADDBOOK_STOREY, ADDBOOK_FINAL = range(4)
 (BOOK_ACTIONS, BOOK_CHANGE_TITLE, BOOK_CHANGE_AUTHOR, BOOK_CHANGE_LOCATION,
  BOOK_CHANGE_SHELF, BOOK_CHANGE_STOREY,
- BOOK_DELETE, BOOK_MODIFY, BOOK_CHECKOUT, BOOK_RETURN) = range(10)
+ BOOK_DELETE, BOOK_MODIFY, BOOK_CHECKOUT, BOOK_RETURN, BOOK_RATE) = range(11)
 
 (user, code_to_add,
  temp_name, temp_title, temp_author, temp_shelf, temp_storey,
@@ -105,7 +105,9 @@ async def dbsearch(update: Update, context: CallbackContext):
         q = q[:MAX_QUERY_NUMBER]
     for i in range(len(q)):
         message += (f'*{i + 1}.* __{q[i][0].title}__ ({q[i][0].author.full_name})\n'
-        f'шкаф {q[i][0].location.shelf}, полка {q[i][0].location.storey}\n')
+        f'шкаф {q[i][0].location.shelf}, полка {q[i][0].location.storey}\n'
+        #f'средняя оценка {q[i][0].rating}'
+                    )
         if q[i][0].status:
             holder = session.query(User).filter(User.id == q[i][0].status).first()
             message += f'сейчас книга на руках у пользователя {holder.username}\n'
@@ -137,12 +139,17 @@ async def book_actions(update: Update, context: CallbackContext):
         [InlineKeyboardButton('Изменить название', callback_data=BOOK_CHANGE_TITLE)],
         [InlineKeyboardButton('Изменить автора', callback_data=BOOK_CHANGE_AUTHOR)],
         [InlineKeyboardButton('Изменить шкаф и полку', callback_data=BOOK_CHANGE_LOCATION)],
-        [InlineKeyboardButton('Удалить', callback_data=BOOK_DELETE)]
+        [InlineKeyboardButton('Удалить', callback_data=BOOK_DELETE)],
+        [InlineKeyboardButton('Оценить', callback_data=BOOK_RATE)]
     ]
     if not(book.status):
         reply_markup.append([InlineKeyboardButton('Взять', callback_data=BOOK_CHECKOUT)])
-    if holder.id == update.effective_user.id:
-        reply_markup.append([InlineKeyboardButton('Вернуть', callback_data=BOOK_RETURN)])
+    try:
+        if holder.id == update.effective_user.id:
+            reply_markup.append([InlineKeyboardButton('Вернуть', callback_data=BOOK_RETURN)])
+    except AttributeError:
+        pass
+
     reply_markup = InlineKeyboardMarkup(reply_markup)
 
     context.user_data[temp_book] = book
@@ -150,6 +157,17 @@ async def book_actions(update: Update, context: CallbackContext):
     return BOOK_MODIFY
 
 async def book_modify(update: Update, context: CallbackContext):
+    """Handler for user's actions with a selected book.
+
+    Args:
+        update (Update): Telegram Update object. Here we get a callback from book_actions.
+        context (CallbackContext): Callback context.
+
+    Returns:
+        int: An int callback code, one of BOOK_CHANGE_TITLE, BOOK_CHANGE_AUTHOR, BOOK_CHANGE_LOCATION,
+        BOOK_CHANGE_SHELF, BOOK_CHANGE_STOREY,
+        BOOK_DELETE, BOOK_MODIFY, BOOK_CHECKOUT, BOOK_RETURN, BOOK_RATE
+        """
     book = context.user_data[temp_book]
     holder = session.query(User).filter(User.id == book.status).first()
     user = update.effective_user
@@ -206,6 +224,19 @@ async def book_modify(update: Update, context: CallbackContext):
             print(e)
             await query.edit_message_text(f'Что-то пошло не так, ты сегодня без книжки...')
 
+    if callback_data == BOOK_RATE:
+        reply_markup = InlineKeyboardMarkup([
+            [InlineKeyboardButton(text=f'{i+1}' + u'\U00002728', callback_data=i+1) for i in range(5)]
+        ])
+
+        try:
+            await query.edit_message_text(f'Отлично! Оцени книгу "{context.user_data[temp_book].title}"',
+                                          reply_markup=reply_markup)
+        except (AttributeError, KeyError):
+            await query.edit_message_text('Похоже, ты не выбрал книгу...')
+
+        return BOOK_RATE
+
     return ConversationHandler.END
 
 async def book_delete(update: Update, context: CallbackContext):
@@ -226,6 +257,27 @@ async def book_delete(update: Update, context: CallbackContext):
             await query.edit_message_text('Что-то пошло не так! Книга спасена счастливой случайностью')
             return ConversationHandler.END
     return ConversationHandler.END
+
+async def book_rate(update: Update, context: CallbackContext):
+    query = update.callback_query
+    await query.answer()
+
+    rating = query.data
+
+    try:
+        session.add(Rating(rating=float(rating), rated_at=datetime.datetime.now(),
+                       user_id=context.user_data[user].id, isbn=context.user_data[temp_book].isbn))
+        ratings = session.query(Rating).filter(Rating.isbn == context.user_data[temp_book].isbn_rel.rating).all()
+        ratings = [i.rating for i in ratings]
+        avg_rating = sum(ratings) / len(ratings)
+
+        context.user_data[temp_book].rating = avg_rating
+        await query.edit_message_text('Добавили твою оценку!')
+    except Exception as e:
+        print(e)
+        await query.edit_message_text('Что-то пошло не так... Извини.')
+        return ConversationHandler.END
+
 
 async def mybooks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -334,6 +386,18 @@ async def addbook_final(update: Update, context: CallbackContext):
 
 
 async def requestfromcode(code: int, user_id, context: CallbackContext):
+    """Get book's title and author.
+
+    Get book's title and author by ISBN code from GoogleBooks API.
+
+    Args:
+        code (int): ISBN code.
+        user_id (int): User ID.
+        context (CallbackContext): Telegram callback context.
+
+    Returns:
+        dict: {'title': title, 'author': author}
+        """
     try:
         r = requests.get(f'https://www.googleapis.com/books/v1/volumes?q=isbn:{code}').json()['items'][0]
         title = r['volumeInfo']['title']
@@ -377,7 +441,8 @@ app.add_handler(ConversationHandler(entry_points=[MessageHandler(filters=filters
                                     states={
                                         BOOK_ACTIONS: [CallbackQueryHandler(book_actions)],
                                         BOOK_MODIFY: [CallbackQueryHandler(book_modify)],
-                                        BOOK_DELETE: [CallbackQueryHandler(book_delete)]
+                                        BOOK_DELETE: [CallbackQueryHandler(book_delete)],
+                                        BOOK_RATE: [CallbackQueryHandler(book_rate)]
                                     },
                                     fallbacks=[MessageHandler(filters=filters.TEXT, callback=dbsearch)]))
 
