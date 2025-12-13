@@ -267,7 +267,7 @@ async def book_rate(update: Update, context: CallbackContext):
     try:
         session.add(Rating(rating=float(rating), rated_at=datetime.datetime.now(),
                        user_id=context.user_data[user].id, isbn=context.user_data[temp_book].isbn))
-        ratings = session.query(Rating).filter(Rating.isbn == context.user_data[temp_book].isbn_rel.rating).all()
+        ratings = session.query(Rating).filter(Rating.isbn == context.user_data[temp_book].isbn).all()
         ratings = [i.rating for i in ratings]
         avg_rating = sum(ratings) / len(ratings)
 
@@ -282,7 +282,6 @@ async def book_rate(update: Update, context: CallbackContext):
 async def mybooks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         q = session.query(Book).filter(Book.status == context.user_data[user].id).all()
-        print(q)
         await context.bot.send_message(chat_id=update.effective_chat.id,
                                        text=''.join([i.title + '\n' for i in q]))
     except (IndexError, KeyError):
@@ -361,7 +360,6 @@ async def addbook_final(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     query = update.callback_query
     await query.answer()
-    print(query.data)
     if query.data == '0':
         await query.edit_message_text('Ну ладно, давай в другой раз!')
         return ConversationHandler.END
